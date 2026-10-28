@@ -20,8 +20,19 @@ Each one can be turned off in `BepInEx/config/perfmod.stickfight.cfg`.
 
 ## Install
 
-1. Install [BepInEx 5](https://github.com/BepInEx/BepInEx/releases) (x64) into the game folder.
-2. Copy `PerformanceMod.dll` into `BepInEx/plugins`.
+### Easy install (Windows)
+
+1. Download `PerformanceMod-windows-installer.zip` from the [latest release](https://github.com/cover099/stick-fight-performance-mod/releases/latest) and extract it anywhere.
+2. Close the game, then double-click `Install.bat`.
+
+It finds the game through Steam (or asks for the folder), installs BepInEx 5 if it isn't there yet, and puts the mod in place. If Windows shows "Windows protected your PC", click **More info** → **Run anyway**.
+
+### Manual install
+
+1. Install [BepInEx 5](https://github.com/BepInEx/BepInEx/releases) (`BepInEx_win_x64`) into the game folder.
+2. Copy `PerformanceMod.dll` into `BepInEx/plugins` (delete an older `PerfMod.dll` there first).
+
+On Linux, set the game's Steam launch options to `WINEDLLOVERRIDES="winhttp=n,b" %command%` so BepInEx loads under Proton.
 
 ## Build
 
