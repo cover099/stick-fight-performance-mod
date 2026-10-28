@@ -13,7 +13,7 @@ Each one can be turned off in `BepInEx/config/perfmod.stickfight.cfg`.
 | `PunchForceCache` | on | Every punchable body part re-fetches 6 component references each frame. They're now cached and only refreshed when the part changes owner. |
 | `KeybindCache` | on | In menus and local play, all 16 keybinds are read from PlayerPrefs every frame. They're now cached and refreshed when a binding is saved or reset. |
 | `NetworkPollRate` | 0 (off) | Optionally limits how often per second Steam is polled for incoming packets. For example 500 = at most 2 ms of extra latency on incoming packets. |
-| `QuietLogging` | on | The game writes a log line on most events (several per hit), and Unity captures a full stack trace for each one. The lines are still written, just without the traces (errors keep theirs). Reduces small hitches on slow CPUs. |
+| `QuietLogging` | off | The game writes a log line on most events (several per hit), and Unity captures a full stack trace for each one. The lines are still written, just without the traces (errors keep theirs). Reduces small hitches on slow CPUs. |
 
 ### Graphics
 

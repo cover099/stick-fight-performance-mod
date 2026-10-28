@@ -36,7 +36,7 @@ namespace PerfMod
                 "Cache keybinds instead of reading all 16 from PlayerPrefs (stored in the registry) every frame in menus and local play.");
             NetworkPollRate = Config.Bind("Optimizations", "NetworkPollRate", 0f,
                 "Max times per second to poll Steam for incoming packets. 0 = every frame (vanilla). E.g. 500 saves ~10 Steam calls on frames in between, at the cost of up to 2 ms extra latency on incoming packets.");
-            QuietLogging = Config.Bind("Optimizations", "QuietLogging", true,
+            QuietLogging = Config.Bind("Optimizations", "QuietLogging", false,
                 "Don't capture a stack trace for every game log line (the game logs several per hit). Lines still go to output_log.txt; errors keep their traces.");
             DisablePostProcessing = Config.Bind("Graphics", "DisablePostProcessing", false,
                 "Turn off the camera's post-processing effects (anti-aliasing, bloom, colour grading...). Big help on weak or integrated GPUs; the game looks a bit plainer and loses its pause blur.");
