@@ -13,6 +13,7 @@
     <!-- Path to a Stick Fight install with BepInEx 5; override with -p:GameDir=/path/to/StickFightTheGame/ -->
     <GameDir Condition="'$(GameDir)' == ''">$(MSBuildThisFileDirectory)../StickFightTheGame/</GameDir>
     <Managed>$(GameDir)StickFight_Data/Managed/</Managed>
+    <SteamPlugins Condition="'$(SteamPlugins)' == ''">$(HOME)/.local/share/Steam/steamapps/common/StickFightTheGame/BepInEx/plugins/</SteamPlugins>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,8 +26,12 @@
     <Reference Include="$(GameDir)BepInEx/core/0Harmony.dll" Private="false" />
   </ItemGroup>
 
+  <!-- Installs into the test copy and the real Steam install (skipped if that folder is missing). -->
   <Target Name="InstallPlugin" AfterTargets="Build">
+    <Delete Files="$(GameDir)BepInEx/plugins/PerfMod.dll" />
+    <Delete Files="$(SteamPlugins)/PerfMod.dll" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)BepInEx/plugins/" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SteamPlugins)" Condition="Exists('$(SteamPlugins)')" />
   </Target>
 
 </Project>

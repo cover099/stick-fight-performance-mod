@@ -13,10 +13,17 @@ Each one can be turned off in `BepInEx/config/perfmod.stickfight.cfg`.
 | `PunchForceCache` | on | Every punchable body part re-fetches 6 component references each frame. They're now cached and only refreshed when the part changes owner. |
 | `KeybindCache` | on | In menus and local play, all 16 keybinds are read from PlayerPrefs every frame. They're now cached and refreshed when a binding is saved or reset. |
 | `NetworkPollRate` | 0 (off) | Optionally limits how often per second Steam is polled for incoming packets. For example 500 = at most 2 ms of extra latency on incoming packets. |
+| `QuietLogging` | on | The game writes a log line on most events (several per hit), and Unity captures a full stack trace for each one. The lines are still written, just without the traces (errors keep theirs). Reduces small hitches on slow CPUs. |
+
+### Graphics
+
+| Setting | Default | What it does |
+|---|---|---|
+| `DisablePostProcessing` | off | Turns off the camera's post-processing effects (anti-aliasing, bloom, colour grading, etc.). A big help on weak or integrated GPUs. The game looks a bit plainer and loses its pause blur. |
 
 ### Profiler
 
-`[Profiler] Enabled = true` times every `Update`/`LateUpdate`/`FixedUpdate` in the game's scripts and logs the most expensive ones to `BepInEx/LogOutput.log` every `Interval` seconds. It adds overhead, so only turn it on to measure.
+`[Profiler] Enabled = true` times every `Update`/`LateUpdate`/`FixedUpdate` in the game's scripts and logs the most expensive ones to `BepInEx/LogOutput.log` every `Interval` seconds. Each report also splits the frame into scripts, physics, rendering and other/waiting (GPU, vsync, frame cap), and shows the worst frame and how many frames took over 20 ms. At startup it logs the CPU, GPU, display and graphics settings, so a log from someone else's PC shows what it's running on. It adds overhead, so only turn it on to measure.
 
 ## Install
 

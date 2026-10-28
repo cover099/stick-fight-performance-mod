@@ -10,7 +10,7 @@ namespace PerfMod
     {
         public const string Guid = "perfmod.stickfight";
         public const string Name = "PerformanceMod";
-        public const string Version = "0.4.0";
+        public const string Version = "0.5.0";
 
         internal static ManualLogSource Log;
         internal static ConfigEntry<bool> CameraOptimization;
@@ -18,6 +18,8 @@ namespace PerfMod
         internal static ConfigEntry<bool> PunchForceCache;
         internal static ConfigEntry<bool> KeybindCache;
         internal static ConfigEntry<float> NetworkPollRate;
+        internal static ConfigEntry<bool> QuietLogging;
+        internal static ConfigEntry<bool> DisablePostProcessing;
         internal static ConfigEntry<bool> Profiler;
         internal static ConfigEntry<float> ProfilerInterval;
 
@@ -34,26 +36,27 @@ namespace PerfMod
                 "Cache keybinds instead of reading all 16 from PlayerPrefs (stored in the registry) every frame in menus and local play.");
             NetworkPollRate = Config.Bind("Optimizations", "NetworkPollRate", 0f,
                 "Max times per second to poll Steam for incoming packets. 0 = every frame (vanilla). E.g. 500 saves ~10 Steam calls on frames in between, at the cost of up to 2 ms extra latency on incoming packets.");
+            QuietLogging = Config.Bind("Optimizations", "QuietLogging", true,
+                "Don't capture a stack trace for every game log line (the game logs several per hit). Lines still go to output_log.txt; errors keep their traces.");
+            DisablePostProcessing = Config.Bind("Graphics", "DisablePostProcessing", false,
+                "Turn off the camera's post-processing effects (anti-aliasing, bloom, colour grading...). Big help on weak or integrated GPUs; the game looks a bit plainer and loses its pause blur.");
             Profiler = Config.Bind("Profiler", "Enabled", false,
                 "Time every per-frame game script and log the most expensive ones to LogOutput.log. Adds overhead; only enable to measure.");
             ProfilerInterval = Config.Bind("Profiler", "Interval", 10f,
                 "Seconds between profiler reports.");
 
+            if (QuietLogging.Value)
+            {
+                PerfMod.QuietLogging.Apply();
+            }
             Harmony harmony = new Harmony(Guid);
             harmony.PatchAll(typeof(Plugin).Assembly);
             if (Profiler.Value)
             {
                 ScriptProfiler.Install(harmony);
+                gameObject.AddComponent<FrameTimer>();
             }
-            Log.LogInfo($"{Name} {Version} loaded (CameraOptimization={CameraOptimization.Value}, SkipDeadKickCheck={SkipDeadKickCheck.Value}, PunchForceCache={PunchForceCache.Value}, KeybindCache={KeybindCache.Value}, NetworkPollRate={NetworkPollRate.Value}, Profiler={Profiler.Value})");
-        }
-
-        private void Update()
-        {
-            if (Profiler.Value)
-            {
-                ScriptProfiler.Tick();
-            }
+            Log.LogInfo($"{Name} {Version} loaded (CameraOptimization={CameraOptimization.Value}, SkipDeadKickCheck={SkipDeadKickCheck.Value}, PunchForceCache={PunchForceCache.Value}, KeybindCache={KeybindCache.Value}, NetworkPollRate={NetworkPollRate.Value}, QuietLogging={QuietLogging.Value}, DisablePostProcessing={DisablePostProcessing.Value}, Profiler={Profiler.Value})");
         }
     }
 }
