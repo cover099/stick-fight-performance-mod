@@ -16,7 +16,7 @@ Each one can be turned off in `BepInEx/config/perfmod.stickfight.cfg`.
 | `KeyJoinCheck` | on | In menus and local play, the "does a keyboard player want to join" check rebuilds its list of keys every frame, making about a third of the game's garbage (so more GC stutters). The keys are now worked out once and again whenever a keybind is saved. |
 | `AsyncMapLoad` | on | Loads the next map in the background instead of freezing the game for it: removes a ~40 ms stutter in the map-change animation. Custom/workshop maps load as before. |
 | `NetworkPollRate` | 0 (off) | Optionally limits how often per second Steam is polled for incoming packets. For example 500 = at most 2 ms of extra latency on incoming packets. |
-| `QuietLogging` | off | The game writes a log line on most events (several per hit), and Unity captures a full stack trace for each one. The lines are still written, just without the traces (errors keep theirs). Reduces small hitches on slow CPUs. |
+| `QuietLogging` | on | The game writes a log line on most events (several per hit), and Unity captures a full stack trace for each one. The lines are still written, just without the traces (errors keep theirs). Reduces small hitches on slow CPUs. |
 
 ### Graphics
 
