@@ -99,6 +99,7 @@ namespace PerfMod
         private static void Postfix()
         {
             KeybindCachePatch.Cache.Clear();
+            AnyKeybindPatch.Invalidate();
         }
     }
 
@@ -155,6 +156,110 @@ namespace PerfMod
         private static bool Prefix()
         {
             return !Plugin.MenuButtonCheck.Value || PauseManager.isPaused;
+        }
+    }
+
+    // ControllerHandler.Update (local play and menus) checks every frame whether a keyboard player wants to
+    // join: CharacterActions.IsAnyKeybindPressed goes through all 8 actions building new "<pref>_Alt" strings
+    // and comparing key codes through List<KeyCode>.Contains (boxes every enum on this Mono): ~700 KB of
+    // garbage a second at 600 FPS, a third of the game's total, which means more frequent GC pauses.
+    // Work out once which keys count (same rules: skip actions bound to an ignored key, check the main and
+    // _Alt binding); recompute whenever keybinds are written (KeybindCacheInvalidatePatch).
+    [HarmonyPatch(typeof(CharacterActions), nameof(CharacterActions.IsAnyKeybindPressed))]
+    internal static class AnyKeybindPatch
+    {
+        private static List<KeyCode> plannedFor;
+        private static int plannedCount = -1;
+        private static int[] plan;   // indices into InControl.KeyInfo.KeyList
+
+        internal static void Invalidate()
+        {
+            plan = null;
+        }
+
+        private static bool Prefix(List<KeyCode> IgnoreKeys, ref bool __result)
+        {
+            if (!Plugin.KeyJoinCheck.Value)
+            {
+                return true;
+            }
+            if (plan == null || !ReferenceEquals(plannedFor, IgnoreKeys) || (IgnoreKeys != null && IgnoreKeys.Count != plannedCount))
+            {
+                plan = Plan(IgnoreKeys);
+                plannedFor = IgnoreKeys;
+                plannedCount = IgnoreKeys != null ? IgnoreKeys.Count : -1;
+            }
+            InControl.KeyInfo[] keyList = InControl.KeyInfo.KeyList;
+            for (int i = 0; i < plan.Length; i++)
+            {
+                if (keyList[plan[i]].IsPressed)
+                {
+                    __result = true;
+                    return false;
+                }
+            }
+            __result = false;
+            return false;
+        }
+
+        private static int[] Plan(List<KeyCode> ignore)
+        {
+            List<int> keys = new List<int>();
+            foreach (string pref in CharacterActions.ActionPrefs)
+            {
+                if (ignore != null && BoundToAny(pref, ignore))
+                {
+                    continue;
+                }
+                Add(keys, pref);
+                Add(keys, pref + "_Alt");
+            }
+            return keys.ToArray();
+        }
+
+        // Vanilla IsKeybindPressed: the first InControl.KeyInfo whose Key matches the binding.
+        private static void Add(List<int> keys, string pref)
+        {
+            KeybindingInfo binding = CharacterActions.GetKeybinding(pref);
+            if (binding.key == -1)
+            {
+                return;
+            }
+            InControl.KeyInfo[] keyList = InControl.KeyInfo.KeyList;
+            for (int i = 0; i < keyList.Length; i++)
+            {
+                if (keyList[i].Key == (InControl.Key)binding.key)
+                {
+                    keys.Add(i);
+                    return;
+                }
+            }
+        }
+
+        // Vanilla IsPrefAnyOfKeys.
+        private static bool BoundToAny(string pref, List<KeyCode> ignore)
+        {
+            KeybindingInfo binding = CharacterActions.GetKeybinding(pref);
+            if (binding.key == -1)
+            {
+                return false;
+            }
+            foreach (InControl.KeyInfo info in InControl.KeyInfo.KeyList)
+            {
+                if (info.Key != (InControl.Key)binding.key)
+                {
+                    continue;
+                }
+                foreach (KeyCode code in info.GetKeyCodes())
+                {
+                    if (ignore.Contains(code))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            return false;
         }
     }
 }

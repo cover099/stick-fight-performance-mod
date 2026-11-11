@@ -29,7 +29,22 @@ namespace PerfMod
             public Kind Kind;
             public long Ticks;
             public long Calls;
+            public long Bytes;
         }
+
+        // Prefix -> Postfix: start time and managed heap use. Heap use (GC.GetTotalMemory) moves in blocks,
+        // so per-method bytes are statistical: over thousands of calls they add up to who allocates.
+        private struct State
+        {
+            public long Ticks;
+            public long Memory;
+        }
+        private static long frameMemory = -1;
+        private static long frameSlowestTicks, frameScriptTicks, frameRenderStart, framePhysicsTicks;
+        private static string frameSlowest = "";
+        private static int framePhysicsSteps;
+        private static long frameBytes;
+        private static int lastGcCount;
 
         private const float HitchMs = 20f;
         private static readonly double MsPerTick = 1000.0 / Stopwatch.Frequency;
@@ -81,6 +96,35 @@ namespace PerfMod
                     }
                 }
             }
+            foreach (Type type in AccessTools.GetTypesFromAssembly(typeof(GameManager).Assembly))
+            {
+                if (!type.IsNested || type.IsGenericTypeDefinition || !typeof(IEnumerator).IsAssignableFrom(type)
+                    || !typeof(MonoBehaviour).IsAssignableFrom(type.DeclaringType))
+                {
+                    continue;
+                }
+                MethodInfo moveNext = AccessTools.DeclaredMethod(type, "MoveNext");
+                if (moveNext == null)
+                {
+                    continue;
+                }
+                string name = type.Name;
+                int lt = name.IndexOf('<'), gt = name.IndexOf('>');
+                if (lt >= 0 && gt > lt)
+                {
+                    name = name.Substring(lt + 1, gt - lt - 1);
+                }
+                Entries[moveNext] = new Entry { Name = type.DeclaringType.Name + "." + name + " (coroutine)", Kind = Kind.Update };
+                try
+                {
+                    harmony.Patch(moveNext, prefix, postfix);
+                    patched++;
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Profiler: could not patch {type.FullName}.MoveNext: {e.Message}");
+                }
+            }
             nextReport = Time.realtimeSinceStartup + Plugin.ProfilerInterval.Value;
             gcAtLastReport = GC.CollectionCount(0);
             Plugin.Log.LogInfo($"Profiler: timing {patched} methods, reporting every {Plugin.ProfilerInterval.Value}s");
@@ -106,20 +150,33 @@ namespace PerfMod
             }
         }
 
-        private static void Prefix(out long __state)
+        private static void Prefix(out State __state)
         {
-            __state = Stopwatch.GetTimestamp();
+            __state.Memory = GC.GetTotalMemory(false);
+            __state.Ticks = Stopwatch.GetTimestamp();
         }
 
-        private static void Postfix(MethodBase __originalMethod, long __state)
+        private static void Postfix(MethodBase __originalMethod, State __state)
         {
             if (!Entries.TryGetValue(__originalMethod, out Entry entry))
             {
                 return;
             }
             long now = Stopwatch.GetTimestamp();
-            entry.Ticks += now - __state;
+            long took = now - __state.Ticks;
+            entry.Ticks += took;
+            if (took > frameSlowestTicks)
+            {
+                frameSlowestTicks = took;
+                frameSlowest = entry.Name;
+            }
+            frameScriptTicks += took;
             entry.Calls++;
+            long allocated = GC.GetTotalMemory(false) - __state.Memory;
+            if (allocated > 0)
+            {
+                entry.Bytes += allocated;
+            }
             if (entry.Kind == Kind.Fixed)
             {
                 lastFixedEnd = now;
@@ -137,7 +194,10 @@ namespace PerfMod
             {
                 return;
             }
-            physicsTicks += Stopwatch.GetTimestamp() - lastFixedEnd;
+            long step = Stopwatch.GetTimestamp() - lastFixedEnd;
+            physicsTicks += step;
+            framePhysicsTicks += step;
+            framePhysicsSteps++;
             physicsSteps++;
             lastFixedEnd = -1;
         }
@@ -146,16 +206,36 @@ namespace PerfMod
         internal static void EndOfFrame()
         {
             long now = Stopwatch.GetTimestamp();
+            long frameRender = 0;
             if (lastLateEnd >= 0)
             {
-                renderTicks += now - lastLateEnd;
+                frameRender = now - lastLateEnd;
+                renderTicks += frameRender;
                 lastLateEnd = -1;
             }
+            if (lastFrameEnd >= 0 && (now - lastFrameEnd) * MsPerTick > 15.0)
+            {
+                Plugin.Log.LogInfo($"Profiler: slow frame {(now - lastFrameEnd) * MsPerTick:F1} ms at {Time.realtimeSinceStartup:F1}s: scripts {frameScriptTicks * MsPerTick:F1} ms "
+                    + $"(slowest {frameSlowest} {frameSlowestTicks * MsPerTick:F1} ms), render {frameRender * MsPerTick:F1} ms, physics {framePhysicsTicks * MsPerTick:F1} ms ({framePhysicsSteps} steps), timeScale {Time.timeScale:F2}, GC {(GC.CollectionCount(0) != lastGcCount ? "yes" : "no")}");
+            }
+            frameSlowestTicks = 0;
+            frameScriptTicks = 0;
+            framePhysicsTicks = 0;
+            framePhysicsSteps = 0;
+            frameSlowest = "";
             if (lastFrameEnd >= 0)
             {
                 measuredFrameTicks += now - lastFrameEnd;
             }
             lastFrameEnd = now;
+            long memory = GC.GetTotalMemory(false);
+            int gcCount = GC.CollectionCount(0);
+            if (frameMemory >= 0 && gcCount == lastGcCount && memory > frameMemory)
+            {
+                frameBytes += memory - frameMemory;
+            }
+            frameMemory = memory;
+            lastGcCount = gcCount;
 
             float frameMs = Time.unscaledDeltaTime * 1000f;
             frames++;
@@ -207,12 +287,25 @@ namespace PerfMod
                 Entry e = sorted[i];
                 sb.AppendLine($"  {e.Ticks * MsPerTick / frames,8:F4} ms/frame  {(double)e.Calls / frames,7:F1} calls/frame  {e.Name}");
             }
+            long scriptBytes = 0;
+            foreach (Entry entry in sorted)
+            {
+                scriptBytes += entry.Bytes;
+            }
+            sb.AppendLine($"  allocations: {frameBytes / 1024.0 / frameSeconds:F0} KB/s total, {scriptBytes / 1024.0 / frameSeconds:F0} KB/s in timed scripts; top allocators:");
+            sorted.Sort((a, b) => b.Bytes.CompareTo(a.Bytes));
+            for (int i = 0; i < Math.Min(15, sorted.Count) && sorted[i].Bytes > 0; i++)
+            {
+                sb.AppendLine($"  {sorted[i].Bytes / 1024.0 / frameSeconds,8:F1} KB/s  {sorted[i].Name}");
+            }
+            frameBytes = 0;
             Plugin.Log.LogInfo(sb.ToString());
 
             foreach (Entry entry in sorted)
             {
                 entry.Ticks = 0;
                 entry.Calls = 0;
+                entry.Bytes = 0;
             }
             frames = 0;
             frameSeconds = 0f;

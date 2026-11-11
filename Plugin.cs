@@ -18,6 +18,8 @@ namespace PerfMod
         internal static ConfigEntry<bool> PunchForceCache;
         internal static ConfigEntry<bool> KeybindCache;
         internal static ConfigEntry<bool> MenuButtonCheck;
+        internal static ConfigEntry<bool> KeyJoinCheck;
+        internal static ConfigEntry<bool> AsyncMapLoad;
         internal static ConfigEntry<float> NetworkPollRate;
         internal static ConfigEntry<bool> QuietLogging;
         internal static ConfigEntry<bool> DisablePostProcessing;
@@ -38,6 +40,10 @@ namespace PerfMod
                 "Cache keybinds instead of reading all 16 from PlayerPrefs (stored in the registry) every frame in menus and local play.");
             MenuButtonCheck = Config.Bind("Optimizations", "MenuButtonCheck", true,
                 "Skip the pause menu buttons' per-frame selection check while not paused (it only acts while paused, but first reads object names, creating garbage every frame).");
+            KeyJoinCheck = Config.Bind("Optimizations", "KeyJoinCheck", true,
+                "Precompute the keys of the per-frame 'does a keyboard player want to join' check (local play and menus) instead of rebuilding them every frame (about a third of the game's garbage, so fewer GC stutters).");
+            AsyncMapLoad = Config.Bind("Optimizations", "AsyncMapLoad", true,
+                "Load the next map in the background instead of freezing for it (vanilla: a ~40 ms freeze during the map-change animation).");
             NetworkPollRate = Config.Bind("Optimizations", "NetworkPollRate", 0f,
                 "Max times per second to poll Steam for incoming packets. 0 = every frame (vanilla). E.g. 500 saves ~10 Steam calls on frames in between, at the cost of up to 2 ms extra latency on incoming packets.");
             QuietLogging = Config.Bind("Optimizations", "QuietLogging", false,
@@ -63,7 +69,7 @@ namespace PerfMod
                 ScriptProfiler.Install(harmony);
                 gameObject.AddComponent<FrameTimer>();
             }
-            Log.LogInfo($"{Name} {Version} loaded (CameraOptimization={CameraOptimization.Value}, SkipDeadKickCheck={SkipDeadKickCheck.Value}, PunchForceCache={PunchForceCache.Value}, KeybindCache={KeybindCache.Value}, MenuButtonCheck={MenuButtonCheck.Value}, NetworkPollRate={NetworkPollRate.Value}, QuietLogging={QuietLogging.Value}, DisablePostProcessing={DisablePostProcessing.Value}, RedundantCameras={RedundantCameras.Value}, Profiler={Profiler.Value})");
+            Log.LogInfo($"{Name} {Version} loaded (CameraOptimization={CameraOptimization.Value}, SkipDeadKickCheck={SkipDeadKickCheck.Value}, PunchForceCache={PunchForceCache.Value}, KeybindCache={KeybindCache.Value}, MenuButtonCheck={MenuButtonCheck.Value}, KeyJoinCheck={KeyJoinCheck.Value}, AsyncMapLoad={AsyncMapLoad.Value}, NetworkPollRate={NetworkPollRate.Value}, QuietLogging={QuietLogging.Value}, DisablePostProcessing={DisablePostProcessing.Value}, RedundantCameras={RedundantCameras.Value}, Profiler={Profiler.Value})");
         }
     }
 }
