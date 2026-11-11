@@ -12,6 +12,9 @@ Each one can be turned off in `BepInEx/config/perfmod.stickfight.cfg`.
 | `SkipDeadKickCheck` | on | Skips the online AFK-kick check, which makes 2 Steam API calls per player per frame but can never kick anyone (the input check it relies on always returns true). |
 | `PunchForceCache` | on | Every punchable body part re-fetches 6 component references each frame. They're now cached and only refreshed when the part changes owner. |
 | `KeybindCache` | on | In menus and local play, all 16 keybinds are read from PlayerPrefs every frame. They're now cached and refreshed when a binding is saved or reset. |
+| `MenuButtonCheck` | on | The 19 pause-menu buttons check every frame whether to take the menu selection, reading object names (new garbage each time) before checking whether the game is paused. They now skip that while not paused, which is when they do nothing anyway. |
+| `KeyJoinCheck` | on | In menus and local play, the "does a keyboard player want to join" check rebuilds its list of keys every frame, making about a third of the game's garbage (so more GC stutters). The keys are now worked out once and again whenever a keybind is saved. |
+| `AsyncMapLoad` | on | Loads the next map in the background instead of freezing the game for it: removes a ~40 ms stutter in the map-change animation. Custom/workshop maps load as before. |
 | `NetworkPollRate` | 0 (off) | Optionally limits how often per second Steam is polled for incoming packets. For example 500 = at most 2 ms of extra latency on incoming packets. |
 | `QuietLogging` | off | The game writes a log line on most events (several per hit), and Unity captures a full stack trace for each one. The lines are still written, just without the traces (errors keep theirs). Reduces small hitches on slow CPUs. |
 
@@ -19,11 +22,12 @@ Each one can be turned off in `BepInEx/config/perfmod.stickfight.cfg`.
 
 | Setting | Default | What it does |
 |---|---|---|
+| `RedundantCameras` | on | Two cameras render every frame for nothing: the level editor's screenshot camera is left on and draws the whole scene, which the main camera then clears and draws again, and the pause-menu camera runs even when you're not paused. Both are skipped (editor screenshots still work). Looks the same; measured **+21% FPS** (≈505 → ≈615 at 3440×1440) and better 1% lows. |
 | `DisablePostProcessing` | off | Turns off the camera's post-processing effects (anti-aliasing, bloom, colour grading, etc.). A big help on weak or integrated GPUs. The game looks a bit plainer and loses its pause blur. |
 
 ### Profiler
 
-`[Profiler] Enabled = true` times every `Update`/`LateUpdate`/`FixedUpdate` in the game's scripts and logs the most expensive ones to `BepInEx/LogOutput.log` every `Interval` seconds. Each report also splits the frame into scripts, physics, rendering and other/waiting (GPU, vsync, frame cap), and shows the worst frame and how many frames took over 20 ms. At startup it logs the CPU, GPU, display and graphics settings, so a log from someone else's PC shows what it's running on. It adds overhead, so only turn it on to measure.
+`[Profiler] Enabled = true` times every `Update`/`LateUpdate`/`FixedUpdate` in the game's scripts and logs the most expensive ones to `BepInEx/LogOutput.log` every `Interval` seconds. Each report also splits the frame into scripts, physics, rendering and other/waiting (GPU, vsync, frame cap), and shows the worst frame and how many frames took over 20 ms, which scripts allocate the most memory (garbage that leads to GC pauses), and for every frame over 15 ms a line saying where its time went. Coroutines are timed too. At startup it logs the CPU, GPU, display and graphics settings, so a log from someone else's PC shows what it's running on. It adds overhead, so only turn it on to measure.
 
 ## Install
 
