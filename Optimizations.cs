@@ -144,4 +144,17 @@ namespace PerfMod
             return allowed;
         }
     }
+
+    // SelectMe (19 pause-menu buttons) checks every frame whether to grab the menu selection, but only acts
+    // while paused, and checks the pause last: before that it calls CheckUsable, which reads transform.name up
+    // to 3 times (each read allocates a new string: ~57 strings a frame, garbage that triggers GC pauses).
+    // Leaving early when not paused is the same outcome.
+    [HarmonyPatch(typeof(SelectMe), "Update")]
+    internal static class MenuButtonCheckPatch
+    {
+        private static bool Prefix()
+        {
+            return !Plugin.MenuButtonCheck.Value || PauseManager.isPaused;
+        }
+    }
 }
