@@ -20,6 +20,7 @@ namespace PerfMod
         internal static ConfigEntry<float> NetworkPollRate;
         internal static ConfigEntry<bool> QuietLogging;
         internal static ConfigEntry<bool> DisablePostProcessing;
+        internal static ConfigEntry<bool> RedundantCameras;
         internal static ConfigEntry<bool> Profiler;
         internal static ConfigEntry<float> ProfilerInterval;
 
@@ -40,6 +41,8 @@ namespace PerfMod
                 "Don't capture a stack trace for every game log line (the game logs several per hit). Lines still go to output_log.txt; errors keep their traces.");
             DisablePostProcessing = Config.Bind("Graphics", "DisablePostProcessing", false,
                 "Turn off the camera's post-processing effects (anti-aliasing, bloom, colour grading...). Big help on weak or integrated GPUs; the game looks a bit plainer and loses its pause blur.");
+            RedundantCameras = Config.Bind("Graphics", "RedundantCameras", true,
+                "Skip two cameras that render every frame for nothing: the level editor's screenshot camera (draws the whole scene, which the main camera then redraws) and the pause menu camera while you're not paused. Looks the same; measured +~22% FPS and much better 1% lows.");
             Profiler = Config.Bind("Profiler", "Enabled", false,
                 "Time every per-frame game script and log the most expensive ones to LogOutput.log. Adds overhead; only enable to measure.");
             ProfilerInterval = Config.Bind("Profiler", "Interval", 10f,
@@ -51,12 +54,13 @@ namespace PerfMod
             }
             Harmony harmony = new Harmony(Guid);
             harmony.PatchAll(typeof(Plugin).Assembly);
+            gameObject.AddComponent<RedundantCameras>();
             if (Profiler.Value)
             {
                 ScriptProfiler.Install(harmony);
                 gameObject.AddComponent<FrameTimer>();
             }
-            Log.LogInfo($"{Name} {Version} loaded (CameraOptimization={CameraOptimization.Value}, SkipDeadKickCheck={SkipDeadKickCheck.Value}, PunchForceCache={PunchForceCache.Value}, KeybindCache={KeybindCache.Value}, NetworkPollRate={NetworkPollRate.Value}, QuietLogging={QuietLogging.Value}, DisablePostProcessing={DisablePostProcessing.Value}, Profiler={Profiler.Value})");
+            Log.LogInfo($"{Name} {Version} loaded (CameraOptimization={CameraOptimization.Value}, SkipDeadKickCheck={SkipDeadKickCheck.Value}, PunchForceCache={PunchForceCache.Value}, KeybindCache={KeybindCache.Value}, NetworkPollRate={NetworkPollRate.Value}, QuietLogging={QuietLogging.Value}, DisablePostProcessing={DisablePostProcessing.Value}, RedundantCameras={RedundantCameras.Value}, Profiler={Profiler.Value})");
         }
     }
 }
