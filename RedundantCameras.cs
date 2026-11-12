@@ -9,10 +9,15 @@ namespace PerfMod
     //    editor's screenshot still works, as it activates the object and calls Camera.Render() itself.
     //  - Camera_Pause draws only the pause menus (MENU layer) but runs every frame, with a full-screen
     //    post-processing pass. It's only needed while paused, or outside a fight (menus, lobby).
+    //    Its canvas ("Menu": the whole pause menu, 611 UI elements and 210 texts, all left active) is still
+    //    batched by Unity every frame even with the camera off: it's switched off with the camera (+~30% FPS
+    //    measured). Only canvases drawn through this camera are touched; it's the only thing that shows them.
     internal class RedundantCameras : MonoBehaviour
     {
         private Camera screenshot;
         private Camera pause;
+        private readonly System.Collections.Generic.List<Canvas> pauseCanvases = new System.Collections.Generic.List<Canvas>();
+        private float nextCanvasSearch;
         private float nextSearch;
 
         private void LateUpdate()
@@ -22,6 +27,13 @@ namespace PerfMod
                 if (pause != null && !pause.enabled)
                 {
                     pause.enabled = true;
+                }
+                foreach (Canvas canvas in pauseCanvases)
+                {
+                    if (canvas != null && !canvas.enabled)
+                    {
+                        canvas.enabled = true;
+                    }
                 }
                 return;
             }
@@ -55,6 +67,26 @@ namespace PerfMod
                 if (pause.enabled != needed)
                 {
                     pause.enabled = needed;
+                }
+                if (now >= nextCanvasSearch)
+                {
+                    // (re)collect: canvases can be created later (scene changes)
+                    nextCanvasSearch = now + 2f;
+                    pauseCanvases.Clear();
+                    foreach (Canvas canvas in Resources.FindObjectsOfTypeAll<Canvas>())
+                    {
+                        if (canvas.gameObject.scene.IsValid() && canvas.renderMode == RenderMode.ScreenSpaceCamera && canvas.worldCamera == pause)
+                        {
+                            pauseCanvases.Add(canvas);
+                        }
+                    }
+                }
+                foreach (Canvas canvas in pauseCanvases)
+                {
+                    if (canvas != null && canvas.enabled != needed)
+                    {
+                        canvas.enabled = needed;
+                    }
                 }
             }
         }

@@ -25,6 +25,7 @@ namespace PerfMod
         internal static ConfigEntry<bool> QuietLogging;
         internal static ConfigEntry<bool> DisablePostProcessing;
         internal static ConfigEntry<bool> RedundantCameras;
+        internal static ConfigEntry<bool> LowPolyParticles;
         internal static ConfigEntry<bool> Profiler;
         internal static ConfigEntry<float> ProfilerInterval;
 
@@ -54,7 +55,9 @@ namespace PerfMod
             DisablePostProcessing = Config.Bind("Graphics", "DisablePostProcessing", false,
                 "Turn off the camera's post-processing effects (anti-aliasing, bloom, colour grading...). Big help on weak or integrated GPUs; the game looks a bit plainer and loses its pause blur.");
             RedundantCameras = Config.Bind("Graphics", "RedundantCameras", true,
-                "Skip two cameras that render every frame for nothing: the level editor's screenshot camera (draws the whole scene, which the main camera then redraws) and the pause menu camera while you're not paused. Looks the same; measured +~22% FPS and much better 1% lows.");
+                "Skip two cameras that render every frame for nothing: the level editor's screenshot camera (draws the whole scene, which the main camera then redraws) and the pause menu camera and its menu canvas while you're not paused. Looks the same; measured +~22% FPS (cameras) and +~19% more (canvas).");
+            LowPolyParticles = Config.Bind("Graphics", "LowPolyParticles", true,
+                "Draw particles that use Unity's 515-vertex sphere (e.g. the glowing orbs on Woods maps) with a 42-vertex sphere of the same size. They're a few pixels across, so it looks the same; measured +~37% FPS on Woods 1.");
             Profiler = Config.Bind("Profiler", "Enabled", false,
                 "Time every per-frame game script and log the most expensive ones to LogOutput.log. Adds overhead; only enable to measure.");
             ProfilerInterval = Config.Bind("Profiler", "Interval", 10f,
@@ -67,12 +70,13 @@ namespace PerfMod
             Harmony harmony = new Harmony(Guid);
             harmony.PatchAll(typeof(Plugin).Assembly);
             gameObject.AddComponent<RedundantCameras>();
+            gameObject.AddComponent<LowPolyParticles>();
             if (Profiler.Value)
             {
                 ScriptProfiler.Install(harmony);
                 gameObject.AddComponent<FrameTimer>();
             }
-            Log.LogInfo($"{Name} {Version} loaded (CameraOptimization={CameraOptimization.Value}, SkipDeadKickCheck={SkipDeadKickCheck.Value}, PunchForceCache={PunchForceCache.Value}, KeybindCache={KeybindCache.Value}, MenuButtonCheck={MenuButtonCheck.Value}, KeyJoinCheck={KeyJoinCheck.Value}, AsyncMapLoad={AsyncMapLoad.Value}, LoadingScreenCheck={LoadingScreenCheck.Value}, NetworkPollRate={NetworkPollRate.Value}, QuietLogging={QuietLogging.Value}, DisablePostProcessing={DisablePostProcessing.Value}, RedundantCameras={RedundantCameras.Value}, Profiler={Profiler.Value})");
+            Log.LogInfo($"{Name} {Version} loaded (CameraOptimization={CameraOptimization.Value}, SkipDeadKickCheck={SkipDeadKickCheck.Value}, PunchForceCache={PunchForceCache.Value}, KeybindCache={KeybindCache.Value}, MenuButtonCheck={MenuButtonCheck.Value}, KeyJoinCheck={KeyJoinCheck.Value}, AsyncMapLoad={AsyncMapLoad.Value}, LoadingScreenCheck={LoadingScreenCheck.Value}, NetworkPollRate={NetworkPollRate.Value}, QuietLogging={QuietLogging.Value}, DisablePostProcessing={DisablePostProcessing.Value}, RedundantCameras={RedundantCameras.Value}, LowPolyParticles={LowPolyParticles.Value}, Profiler={Profiler.Value})");
         }
     }
 }

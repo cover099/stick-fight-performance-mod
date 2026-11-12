@@ -23,7 +23,8 @@ Each one can be turned off in `BepInEx/config/perfmod.stickfight.cfg`.
 
 | Setting | Default | What it does |
 |---|---|---|
-| `RedundantCameras` | on | Two cameras render every frame for nothing: the level editor's screenshot camera is left on and draws the whole scene, which the main camera then clears and draws again, and the pause-menu camera runs even when you're not paused. Both are skipped (editor screenshots still work). Looks the same; measured **+21% FPS** (≈505 → ≈615 at 3440×1440) and better 1% lows. |
+| `RedundantCameras` | on | Two cameras render every frame for nothing: the level editor's screenshot camera is left on and draws the whole scene, which the main camera then clears and draws again, and the pause-menu camera runs even when you're not paused. Both are skipped (editor screenshots still work), and so is the pause menu's canvas (611 UI elements Unity kept processing every frame although nothing drew them). Looks the same; measured **+21% FPS** for the cameras (≈505 → ≈615 at 3440×1440) and **+19%** more for the canvas, with better 1% lows. |
+| `LowPolyParticles` | on | Some maps' glowing orbs (e.g. the Woods lanterns) draw every particle as Unity's 515-vertex sphere, which Unity rebuilds on the CPU every frame. They're a few pixels across, so they're now drawn with a 42-vertex sphere of the same size. Looks the same; measured **+~35% FPS** on Woods 1. |
 | `DisablePostProcessing` | off | Turns off the camera's post-processing effects (anti-aliasing, bloom, colour grading, etc.). A big help on weak or integrated GPUs. The game looks a bit plainer and loses its pause blur. |
 
 ### Profiler
