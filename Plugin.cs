@@ -26,6 +26,7 @@ namespace PerfMod
         internal static ConfigEntry<bool> DisablePostProcessing;
         internal static ConfigEntry<bool> RedundantCameras;
         internal static ConfigEntry<bool> LowPolyParticles;
+        internal static ConfigEntry<bool> HideDecor, HideSprites, HideMapParticles, HideFightEffects, HideHUD;
         internal static ConfigEntry<bool> Profiler;
         internal static ConfigEntry<float> ProfilerInterval;
 
@@ -58,6 +59,16 @@ namespace PerfMod
                 "Skip two cameras that render every frame for nothing: the level editor's screenshot camera (draws the whole scene, which the main camera then redraws) and the pause menu camera and its menu canvas while you're not paused. Looks the same; measured +~22% FPS (cameras) and +~19% more (canvas).");
             LowPolyParticles = Config.Bind("Graphics", "LowPolyParticles", true,
                 "Draw particles that use Unity's 515-vertex sphere (e.g. the glowing orbs on Woods maps) with a 42-vertex sphere of the same size. They're a few pixels across, so it looks the same; measured +~37% FPS on Woods 1.");
+            HideDecor = Config.Bind("Graphics", "HideDecor", false,
+                "Low detail: hide background scenery (meshes you can't touch: no collider, not a player or weapon). ~+5% FPS on Woods.");
+            HideSprites = Config.Bind("Graphics", "HideSprites", false,
+                "Low detail: hide flat sprite decorations that aren't part of players, weapons or anything solid. ~+2% FPS.");
+            HideMapParticles = Config.Bind("Graphics", "HideMapParticles", false,
+                "Low detail: hide maps' ambient particle effects (glowing orbs, leaves, fireflies...). Gain depends on the map.");
+            HideFightEffects = Config.Bind("Graphics", "HideFightEffects", false,
+                "Low detail: hide players' and weapons' particle effects (dust, punch/block/damage puffs, muzzle effects). You lose some hit feedback.");
+            HideHUD = Config.Bind("Graphics", "HideHUD", false,
+                "Low detail: hide the score display and the canvases above players. ~+5% FPS.");
             Profiler = Config.Bind("Profiler", "Enabled", false,
                 "Time every per-frame game script and log the most expensive ones to LogOutput.log. Adds overhead; only enable to measure.");
             ProfilerInterval = Config.Bind("Profiler", "Interval", 10f,
@@ -71,6 +82,7 @@ namespace PerfMod
             harmony.PatchAll(typeof(Plugin).Assembly);
             gameObject.AddComponent<RedundantCameras>();
             gameObject.AddComponent<LowPolyParticles>();
+            gameObject.AddComponent<LowDetail>();
             if (Profiler.Value)
             {
                 ScriptProfiler.Install(harmony);
